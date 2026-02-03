@@ -12,6 +12,7 @@ dependencies:
   flutter_joystick: ^0.2.2
   wifi_iot: ^0.3.19+2
   permission_handler: ^11.0.1
+  web_socket_channel: ^2.4.0
 
 dev_dependencies:
   flutter_test:
