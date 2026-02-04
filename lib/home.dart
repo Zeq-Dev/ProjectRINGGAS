@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ElevatedButton(
                 onPressed: () async {
                   await WiFiForIoTPlugin.connect(
-                    "RINGGAS Boat",
+                    "RINGGAS_Boat",
                     password: "",
                     joinOnce: true,
                   );
