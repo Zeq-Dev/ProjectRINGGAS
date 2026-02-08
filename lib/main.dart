@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ringgas/controller.dart';
 import 'package:ringgas/home.dart';
+import 'package:ringgas/homeScreen.dart';
 import 'package:wifi_iot/wifi_iot.dart';
 import 'package:permission_handler/permission_handler.dart';
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ringgas/controller.dart';
+import 'package:ringgas/homeScreen.dart';
+import 'package:ringgas/settingsScreen.dart';
 import 'package:wifi_iot/wifi_iot.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -13,6 +15,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
 
   String appTitle = "Checking connection...";
+  int _selectedIndex = 0;
+  final ScrollController _homeController = ScrollController();
+
+  List<Widget> widgetList = const [
+    NewHomeScreen(),
+    JoystickController(),
+    SettingsScreen()
+  ];
 
   @override
   void initState() {
@@ -34,39 +44,23 @@ class _HomeScreenState extends State<HomeScreen> {
       title: appTitle,
       home: Scaffold(
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                appTitle,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  await WiFiForIoTPlugin.connect(
-                    "RINGGAS_Boat",
-                    password: "",
-                    joinOnce: true,
-                  );
-
-                  loadBoat(); // re-check after connecting
-                },
-                child: const Text("Connect to RINGGAS"),
-              ),
-              ElevatedButton(onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const JoystickController()
-                  )
-                );
-              }, child: Text('Controller'))
-            ],
-          ),
+          child: widgetList[_selectedIndex],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.blue[400],
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.monitor), label: 'RINGGAS Boat'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings')
+          ],
+          currentIndex: _selectedIndex,
+          selectedItemColor: Colors.white,
+          onTap: (int index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
         ),
       ),
     );
@@ -79,7 +73,11 @@ Future<String> checkConnection() async {
   String? ssid = await WiFiForIoTPlugin.getSSID();
   debugPrint("ssid: $ssid");
 
-  if (ssid != null && ssid.contains("RINGGAS")) {
+  if (ssid == null) return "Not connected to WiFi";
+
+  ssid = ssid.replaceAll('"', '');
+
+  if (ssid == "RINGGAS_Boat") {
     return "RINGGAS Connected!";
   }
 
