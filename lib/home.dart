@@ -42,30 +42,35 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: appTitle,
-      home: Scaffold(
-        body: Center(
-          child: widgetList[_selectedIndex],
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.blue[400],
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.monitor), label: 'RINGGAS Boat'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings')
-          ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: Colors.white,
-          onTap: (int index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-        ),
+      home: OrientationBuilder(
+        builder: (context, orientation) {
+        return Scaffold(
+          body: Center(
+            child: widgetList[_selectedIndex],
+          ),
+          bottomNavigationBar: orientation == Orientation.portrait ? BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.blue[400],
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.monitor), label: 'RINGGAS Boat'),
+              BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings')
+            ],
+            currentIndex: _selectedIndex,
+            selectedItemColor: Colors.white,
+            onTap: (int index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+          ) : null,
+        );
+        },
       ),
     );
   }
 }
+
 
 Future<String> checkConnection() async {
   await Permission.location.request();

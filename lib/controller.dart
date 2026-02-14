@@ -9,6 +9,9 @@ class JoystickController extends StatefulWidget {
   State<JoystickController> createState() => _JoystickControllerState();
 }
 
+double leftMotor = 0;
+double rightMotor = 0;
+
 class _JoystickControllerState extends State<JoystickController> {
   late WebSocketChannel channel;
 
@@ -39,10 +42,114 @@ class _JoystickControllerState extends State<JoystickController> {
     super.dispose();
   }
 
+  void sendMotorValues(double left, double right) {
+    // Map -1.0 → 1.0 to -255 → 255
+    int leftSpeed = (left * 255).toInt();
+    int rightSpeed = (right * 255).toInt();
+
+    // Send to ESP32 via WebSocket
+    channel.sink.add("L:$leftSpeed,R:$rightSpeed");
+  }
+
   bool conveyor = false;
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      body: OrientationBuilder(builder: (context, orientation) {
+       if (orientation == Orientation.portrait) {
+        return portraitLayout();
+       } else {
+        return landscapeLayout();
+       }
+      }),
+    );
+  }
+
+  Widget landscapeLayout() {
+    return Scaffold(
+      bottomNavigationBar: null,
+      body: Center(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Switch(value: conveyor, onChanged: (bool value) {
+                  setState(() {
+                    conveyor = value;
+                    channel.sink.add('C,${value ? 1 : 0}');
+                  });
+                }),
+                Joystick(
+                  mode: JoystickMode.vertical,
+                  base: JoystickBase(
+                    decoration: JoystickBaseDecoration(
+                      middleCircleColor: Colors.grey[500],
+                      innerCircleColor: Colors.blueAccent,
+                      drawOuterCircle: false,
+                      drawInnerCircle: false,
+                    ),
+                  ),
+                  listener: (details) {
+                    leftMotor = details.y; // -1.0 to 1.0
+                    sendMotorValues(leftMotor, rightMotor);
+                  },
+                  onStickDragEnd: () {
+                    leftMotor = 0;
+                    sendMotorValues(leftMotor, rightMotor);
+                  },
+                ),
+              ],
+            ),
+            
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                color: Colors.black,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Switch(value: conveyor, onChanged: (bool value) {
+                  setState(() {
+                    conveyor = value;
+                    channel.sink.add('C,${value ? 1 : 0}');
+                  });
+                }),
+                Joystick(
+                  base: JoystickBase(
+                    decoration: JoystickBaseDecoration(
+                      middleCircleColor: Colors.grey[500],
+                      innerCircleColor: Colors.blueAccent,
+                      drawOuterCircle: false,
+                      drawInnerCircle: false
+                    ),
+                  ),
+                  mode: JoystickMode.vertical, // only X-axis
+                  listener: (details) {
+                    rightMotor = -details.y; // -1.0 to 1.0
+                    sendMotorValues(leftMotor, rightMotor);
+                  },
+                  onStickDragEnd: () {
+                    rightMotor = 0;
+                    sendMotorValues(leftMotor, rightMotor);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget portraitLayout() {
     return Scaffold(
       appBar: AppBar(
         title: const Text("RINGGAS Boat"),
