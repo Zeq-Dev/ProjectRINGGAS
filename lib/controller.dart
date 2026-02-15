@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_joystick/flutter_joystick.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 
 class JoystickController extends StatefulWidget {
   const JoystickController({super.key});
@@ -52,6 +54,19 @@ class _JoystickControllerState extends State<JoystickController> {
   }
 
   bool conveyor = false;
+  
+  Future<bool> isStreamActive() async {
+    try {
+      final response = await http
+          .get(Uri.parse('http://192.168.4.2/capture'))
+          .timeout(const Duration(seconds: 2));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +124,17 @@ class _JoystickControllerState extends State<JoystickController> {
             Expanded(
               child: Container(
                 margin: const EdgeInsets.all(12),
-                color: Colors.black,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Center(
+                  child: Mjpeg(
+                    stream: 'http://192.168.4.2:81/stream',
+                    isLive: true,
+                    timeout: Duration(seconds: 5),
+                  )
+                ),
               ),
             ),
             Column(
