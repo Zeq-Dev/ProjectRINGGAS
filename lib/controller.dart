@@ -81,6 +81,8 @@ class _JoystickControllerState extends State<JoystickController> {
     );
   }
 
+  double _value = 100;
+
   Widget landscapeLayout() {
     return Scaffold(
       bottomNavigationBar: null,
@@ -93,12 +95,18 @@ class _JoystickControllerState extends State<JoystickController> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Switch(value: conveyor, onChanged: (bool value) {
-                  setState(() {
-                    conveyor = value;
-                    channel.sink.add('C,${value ? 1 : 0}');
-                  });
-                }),
+                Slider(
+                  min: 0,
+                  max: 140,
+                  divisions: 140,
+                  value: _value,
+                  onChanged: (newValue) {
+                    setState(() {
+                      _value = newValue;
+                      channel.sink.add('C_s,${_value.toInt()},');
+                    });
+                  }
+                ),
                 Joystick(
                   mode: JoystickMode.vertical,
                   base: JoystickBase(

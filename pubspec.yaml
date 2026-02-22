@@ -15,6 +15,7 @@ dependencies:
   web_socket_channel: ^2.4.0
   flutter_mjpeg: ^2.0.4
   http: 0.13.6
+  flutter_native_splash: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +24,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+flutter_native_splash:
+  color: "#ffffff"        # Background color
+  image: assets/logo.png  # Your splash image
+  android: true
+  ios: true
