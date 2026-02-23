@@ -3,6 +3,24 @@ import 'package:flutter_joystick/flutter_joystick.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:vibration/vibration.dart';
+
+IconData getBatteryIcon(int percent) {
+  if (percent >= 95) return Icons.battery_full;
+  if (percent >= 75) return Icons.battery_6_bar;
+  if (percent >= 55) return Icons.battery_5_bar;
+  if (percent >= 35) return Icons.battery_4_bar;
+  if (percent >= 15) return Icons.battery_3_bar;
+  if (percent > 5) return Icons.battery_2_bar;
+  return Icons.battery_alert;
+}
+
+Color getBatteryColor(int percent) {
+  if (percent >= 50) return Colors.green;
+  if (percent >= 20) return Colors.orange;
+  return Colors.red;
+}
 
 class JoystickController extends StatefulWidget {
   const JoystickController({super.key});
@@ -14,6 +32,19 @@ class JoystickController extends StatefulWidget {
 double leftMotor = 0;
 double rightMotor = 0;
 
+late WebSocketChannel channel;
+int batteryPercent = 0;
+
+final player = AudioPlayer();
+bool isPlayingAlert = false;
+
+bool isVibrating = false;
+
+bool garbageFull = false;
+int garbageDetectedCount = 0; // counts consecutive detections
+final int requiredDetectionMillis = 10000; // 10 seconds
+int lastDetectionTime = 0; // timestamp of first detection
+
 class _JoystickControllerState extends State<JoystickController> {
   late WebSocketChannel channel;
 
@@ -23,6 +54,54 @@ class _JoystickControllerState extends State<JoystickController> {
     channel = WebSocketChannel.connect(
       Uri.parse('ws://192.168.4.1:81'), // ESP32 AP IP
     );
+
+    channel.stream.listen((message) async {
+    print("Received: $message");
+
+    if (message.startsWith("U,")) {
+      int detected = int.parse(message.split(",")[1]);
+      int now = DateTime.now().millisecondsSinceEpoch;
+
+      if (detected == 1) {
+        if (lastDetectionTime == 0) {
+          lastDetectionTime = now; // start counting
+        } else if (now - lastDetectionTime >= requiredDetectionMillis) {
+          // Detected continuously for 10 seconds
+          if (!garbageFull) {
+            setState(() {
+              garbageFull = true;
+            });
+
+            // Play sound & vibrate
+            if (!isPlayingAlert) {
+              isPlayingAlert = true;
+              player.play(AssetSource('beep.mp3'));
+              Vibration.hasVibrator().then((v) {
+                if (v ?? false) Vibration.vibrate(duration: 500);
+              });
+            }
+          }
+        }
+      } else {
+        // Reset if object disappears
+        lastDetectionTime = 0;
+        if (garbageFull) {
+          setState(() {
+            garbageFull = false;
+          });
+          isPlayingAlert = false;
+          player.stop();
+          Vibration.cancel();
+        }
+      }
+    }
+
+    if (message.startsWith("B,")) {
+        setState(() {
+          batteryPercent = int.parse(message.split(",")[1]);
+        });
+      }
+    });
   }
 
   // void sendJoystick(double x, double y) {
@@ -136,12 +215,66 @@ class _JoystickControllerState extends State<JoystickController> {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: Center(
-                  child: Mjpeg(
-                    stream: 'http://192.168.4.2:81/stream',
-                    isLive: true,
-                    timeout: Duration(seconds: 5),
-                  )
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Mjpeg(
+                        stream: 'http://192.168.4.2:81/stream',
+                        isLive: true,
+                        timeout: Duration(seconds: 5),
+                        
+                        error: (context, error, stack) {
+                          return const Center(
+                            child: Text(
+                              "NO CAMERA CONNECTION",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    ),
+                    Positioned(
+                      child: Row(
+                        children: [
+                          Icon(
+                            getBatteryIcon(batteryPercent),
+                            color: getBatteryColor(batteryPercent),
+                            size: 28,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            "$batteryPercent%",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: getBatteryColor(batteryPercent),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (garbageFull)
+                      Center(
+                        child: Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            "GARBAGE FULL!",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
